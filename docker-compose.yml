@@ -39,12 +39,32 @@ services:
       POSTGRES_DB: todo_app
       POSTGRES_USER: todo_user
       POSTGRES_PASSWORD: secret
+    command:
+      - -c
+      - listen_addresses=*
+      - -c
+      - wal_level=logical
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
       - todo-network
+
+  electric:
+    image: docker.io/electricsql/electric:latest
+    environment:
+      DATABASE_URL: postgresql://todo_user:secret@postgres:5432/todo_app?sslmode=disable
+      # Not suitable for production. Only use insecure mode in development or if you've otherwise secured the Electric API.
+      # See https://electric-sql.com/docs/guides/security
+      ELECTRIC_INSECURE: true
+    ports:
+      - '3000:3000'
+    networks:
+      - todo-network
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # Database UI (Adminer)
   adminer:
