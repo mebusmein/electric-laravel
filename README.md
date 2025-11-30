@@ -1,25 +1,78 @@
-# Todo App - Laravel + React
+# Todo App - Laravel + React + ElectricSQL
 
-A full-stack todo application with user authentication, built with Laravel 11 API backend and React SPA frontend.
+A full-stack todo application demonstrating real-time sync with ElectricSQL, Laravel API backend with authentication, and React SPA frontend.
+
+## Key Demo Files
+
+### Backend: ElectricSQL Shape Proxy with Auth
+
+[`backend/app/Http/Controllers/Api/ShapeController.php`](backend/app/Http/Controllers/Api/ShapeController.php)
+
+This controller demonstrates how to proxy ElectricSQL shape requests through Laravel with:
+- **Authentication** - Validates Sanctum bearer token before allowing access
+- **User-level data filtering** - Adds `WHERE user_id = {user_id}` to ensure users only see their own todos
+- **Protocol parameter forwarding** - Passes through Electric protocol params (`offset`, `handle`, `live`, etc.)
+- **Server-side table specification** - Sets the table name server-side for security
+
+```php
+// Filter by user_id - users can only see their own todos
+$queryParams['where'] = "user_id = {$user->id}";
+```
+
+### Frontend: Live Query Integration
+
+[`frontend/src/pages/TodosPage.tsx`](frontend/src/pages/TodosPage.tsx)
+
+The TodosPage demonstrates real-time data sync using `@tanstack/react-db` with ElectricSQL:
+
+```tsx
+const { data: todos, isLoading } = useLiveQuery((q) =>
+  q.from({ todos: todosCollection })
+);
+```
+
+[`frontend/src/api/todos.ts`](frontend/src/api/todos.ts)
+
+Configures the ElectricSQL collection with authenticated shape requests:
+
+```ts
+export const todosCollection = createCollection(
+  electricCollectionOptions({
+    id: 'todos',
+    schema: todoShape,
+    shapeOptions: {
+      url: `${API_URL}/api/shape/todos`,
+      headers: {
+        Authorization: getAuthToken,
+      },
+    },
+    getKey: (item) => item.id,
+  })
+)
+```
+
+---
 
 ## Tech Stack
 
 ### Backend
-- Laravel 11 with PHP 8.3
+- Laravel 11 with PHP 8.4
 - PostgreSQL 16
 - Laravel Sanctum for API authentication
+- ElectricSQL shape proxy
 - Docker (PHP-FPM + Nginx)
 
 ### Frontend
 - React 18 with TypeScript
 - Vite for development/bundling
 - Tailwind CSS for styling
+- `@tanstack/react-db` + `@tanstack/electric-db-collection` for real-time sync
 - React Router for navigation
-- Axios for API calls
 
 ## Prerequisites
 
 - Docker & Docker Compose
+- ElectricSQL running (default: http://localhost:3000)
 - Node.js 20+ (for local frontend development)
 
 ## Getting Started
@@ -34,23 +87,28 @@ This starts:
 - **Laravel API** at http://localhost:8000
 - **PostgreSQL** at localhost:5432
 - **React frontend** at http://localhost:5173
+- **Adminer (DB UI)** at http://localhost:8080
 
 ### 2. Set up the Laravel backend
 
 ```bash
-# Enter the app container
-docker exec -it todo-app bash
-
-# Run migrations
-php artisan migrate
-
-# Generate application key (if not already set)
-php artisan key:generate
+# Run migrations and seed test data
+docker exec todo-app php artisan migrate:fresh --seed
 ```
 
-### 3. Access the application
+### 3. Start ElectricSQL
 
-Open http://localhost:5173 in your browser to access the React frontend.
+Make sure ElectricSQL is running and connected to the same PostgreSQL database.
+
+### 4. Access the application
+
+Open http://localhost:5173 in your browser.
+
+**Test accounts:**
+| Email | Password |
+|-------|----------|
+| john@example.com | password |
+| jane@example.com | password |
 
 ## API Endpoints
 
@@ -71,56 +129,31 @@ Open http://localhost:5173 in your browser to access the React frontend.
 | PUT | `/api/todos/{id}` | Update a todo |
 | DELETE | `/api/todos/{id}` | Delete a todo |
 
-## Development
-
-### Backend (Laravel)
-
-The Laravel application is in the `backend/` directory. Any changes are automatically reflected due to volume mounting.
-
-```bash
-# Run artisan commands
-docker exec -it todo-app php artisan <command>
-
-# View logs
-docker logs todo-app -f
-```
-
-### Frontend (React)
-
-The React application is in the `frontend/` directory. Vite provides hot module replacement.
-
-```bash
-# For local development without Docker
-cd frontend
-npm install
-npm run dev
-```
+### ElectricSQL Shape Proxy
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/shape/todos` | Proxied shape endpoint with user filtering |
 
 ## Project Structure
 
 ```
 .
-├── docker-compose.yml          # Docker orchestration
-├── backend/                    # Laravel API
-│   ├── Dockerfile
-│   ├── docker/
-│   │   ├── nginx.conf
-│   │   └── php.ini
-│   ├── app/
-│   │   ├── Http/Controllers/Api/
-│   │   │   ├── AuthController.php
-│   │   │   └── TodoController.php
-│   │   └── Models/
-│   │       ├── User.php
-│   │       └── Todo.php
+├── docker-compose.yml
+├── backend/
+│   ├── app/Http/Controllers/Api/
+│   │   ├── AuthController.php
+│   │   ├── ShapeController.php    # <-- ElectricSQL proxy
+│   │   └── TodoController.php
+│   ├── app/Models/
+│   │   ├── User.php
+│   │   └── Todo.php
 │   └── routes/api.php
-└── frontend/                   # React SPA
-    ├── Dockerfile
+└── frontend/
     └── src/
-        ├── api/                # API client & types
-        ├── contexts/           # React contexts
-        ├── components/         # Reusable components
-        └── pages/              # Page components
+        ├── api/
+        │   └── todos.ts           # <-- Electric collection config
+        └── pages/
+            └── TodosPage.tsx      # <-- Live query usage
 ```
 
 ## Environment Variables
@@ -133,8 +166,7 @@ DB_PORT=5432
 DB_DATABASE=todo_app
 DB_USERNAME=todo_user
 DB_PASSWORD=secret
-SANCTUM_STATEFUL_DOMAINS=localhost:5173
-FRONTEND_URL=http://localhost:5173
+ELECTRIC_URL=http://host.docker.internal:3000
 ```
 
 ### Frontend
@@ -153,4 +185,3 @@ To also remove volumes (database data):
 ```bash
 docker-compose down -v
 ```
-
