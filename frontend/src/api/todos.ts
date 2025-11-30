@@ -1,5 +1,10 @@
+import { createCollection } from '@tanstack/react-db';
 import client from './client';
 import type { CreateTodoData, Todo, UpdateTodoData } from './types';
+import { electricCollectionOptions } from '@tanstack/electric-db-collection';
+import z from 'zod/v4';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export const todosApi = {
   getAll: async (): Promise<Todo[]> => {
@@ -27,3 +32,31 @@ export const todosApi = {
   },
 };
 
+const todoShape = z.object({
+  id: z.number(),
+  title: z.string(),
+  description: z.string().nullable(),
+  completed: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string(),
+})
+
+// Helper to get auth headers for Electric shape requests
+const getAuthToken = () => {
+  const token = localStorage.getItem('token');
+  return token ? `Bearer ${token}` : "";
+};
+
+export const todosCollection = createCollection(
+  electricCollectionOptions({
+    id: 'todos',
+    schema: todoShape,
+    shapeOptions: {
+      url: `${API_URL}/api/shape/todos`,
+      headers: {
+        Authorization: getAuthToken,
+      },
+    },
+    getKey: (item) => item.id,
+  })
+)
