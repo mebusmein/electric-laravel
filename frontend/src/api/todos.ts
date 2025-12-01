@@ -34,6 +34,7 @@ export const todosApi = {
 
 const todoShape = z.object({
   id: z.number(),
+  user_id: z.number(),
   title: z.string(),
   description: z.string().nullable(),
   completed: z.boolean(),
