@@ -1,10 +1,18 @@
 import { useState } from "react";
 import type { Todo } from "../api/types";
+import { eq, useLiveQuery } from "@tanstack/react-db";
+import { labelsCollection, todoLabelsCollection } from "../api/labels";
+import { LabelSelector } from "./LabelSelector";
 
 interface TodoItemProps {
   todo: Todo;
   onToggleComplete: (todo: Todo) => void;
-  onUpdate: (id: number, title: string, description?: string) => void;
+  onUpdate: (
+    id: number,
+    title: string,
+    description?: string,
+    labelIds?: number[]
+  ) => void;
   onDelete: (id: number) => void;
 }
 
@@ -19,22 +27,48 @@ export function TodoItem({
   const [editDescription, setEditDescription] = useState(
     todo.description || ""
   );
+  const [editLabelIds, setEditLabelIds] = useState<number[]>([]);
+
+  const { data: labels } = useLiveQuery((q) => {
+    const todoLabels = q
+      .from({ todoLabels: todoLabelsCollection })
+      .where(({ todoLabels }) => eq(todoLabels.todo_id, todo.id));
+
+    return q
+      .from({ todoLabels: todoLabels })
+      .join({ labels: labelsCollection }, ({ todoLabels, labels }) =>
+        eq(todoLabels.label_id, labels.id)
+      );
+  });
+
+  // Get current label IDs for this todo
+  const currentLabelIds =
+    labels
+      ?.map((item) => item.labels?.id)
+      .filter((id): id is number => id !== undefined) ?? [];
 
   const handleStartEdit = () => {
     setIsEditing(true);
     setEditTitle(todo.title);
     setEditDescription(todo.description || "");
+    setEditLabelIds(currentLabelIds);
   };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditTitle(todo.title);
     setEditDescription(todo.description || "");
+    setEditLabelIds(currentLabelIds);
   };
 
   const handleSaveEdit = () => {
     if (!editTitle.trim()) return;
-    onUpdate(todo.id, editTitle.trim(), editDescription.trim() || undefined);
+    onUpdate(
+      todo.id,
+      editTitle.trim(),
+      editDescription.trim() || undefined,
+      editLabelIds
+    );
     setIsEditing(false);
   };
 
@@ -57,6 +91,10 @@ export function TodoItem({
             onChange={(e) => setEditDescription(e.target.value)}
             rows={2}
             className="w-full px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] resize-none"
+          />
+          <LabelSelector
+            selectedLabelIds={editLabelIds}
+            onChange={setEditLabelIds}
           />
           <div className="flex gap-2 justify-end">
             <button
@@ -114,6 +152,27 @@ export function TodoItem({
                 {todo.description}
               </p>
             )}
+            {labels && labels.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {labels.map((item) => (
+                  <span
+                    key={item.labels?.id}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                    style={{
+                      backgroundColor: `${item.labels?.color}20`,
+                      color: item.labels?.color,
+                      border: `1px solid ${item.labels?.color}40`,
+                    }}
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: item.labels?.color }}
+                    />
+                    {item.labels?.name}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex gap-1">
             <button
@@ -158,4 +217,3 @@ export function TodoItem({
     </div>
   );
 }
-

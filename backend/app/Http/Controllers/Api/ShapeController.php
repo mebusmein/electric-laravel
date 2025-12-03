@@ -65,5 +65,88 @@ class ShapeController extends Controller
         return response($response->body(), $response->status())
             ->withHeaders($headers);
     }
+
+    public function labels(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+        
+        // Build the upstream ElectricSQL URL
+        $electricUrl = env('ELECTRIC_URL', 'http://localhost:3000');
+        $upstreamUrl = $electricUrl . '/v1/shape';
+
+        // Build query parameters
+        $queryParams = [];
+        
+        // Pass through Electric protocol parameters
+        foreach (self::ELECTRIC_PROTOCOL_QUERY_PARAMS as $param) {
+            if ($request->has($param)) {
+                $queryParams[$param] = $request->query($param);
+            }
+        }
+        
+        // Set the table server-side
+        $queryParams['table'] = 'labels';
+
+        // Filter by user_id - users can only see their own labels
+        $queryParams['where'] = "user_id = {$user->id}";
+
+        // Make the request to ElectricSQL
+        $response = Http::withOptions([
+            'stream' => true,
+        ])->get($upstreamUrl, $queryParams);
+
+        // Get response headers, removing content-encoding and content-length
+        // as fetch decompresses the body but doesn't update these headers
+        $headers = collect($response->headers())
+            ->except(['content-encoding', 'Content-Encoding', 'content-length', 'Content-Length', 'transfer-encoding', 'Transfer-Encoding'])
+            ->toArray();
+
+        return response($response->body(), $response->status())
+            ->withHeaders($headers);
+    }
+
+    public function todoLabels(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+        
+        // Build the upstream ElectricSQL URL
+        $electricUrl = env('ELECTRIC_URL', 'http://localhost:3000');
+        $upstreamUrl = $electricUrl . '/v1/shape';
+
+        // Build query parameters
+        $queryParams = [];
+        
+        // Pass through Electric protocol parameters
+        foreach (self::ELECTRIC_PROTOCOL_QUERY_PARAMS as $param) {
+            if ($request->has($param)) {
+                $queryParams[$param] = $request->query($param);
+            }
+        }
+        
+        // Set the table server-side
+        $queryParams['table'] = 'label_todo';
+
+        // Make the request to ElectricSQL
+        $response = Http::withOptions([
+            'stream' => true,
+        ])->get($upstreamUrl, $queryParams);
+
+        // Get response headers, removing content-encoding and content-length
+        // as fetch decompresses the body but doesn't update these headers
+        $headers = collect($response->headers())
+            ->except(['content-encoding', 'Content-Encoding', 'content-length', 'Content-Length', 'transfer-encoding', 'Transfer-Encoding'])
+            ->toArray();
+
+        return response($response->body(), $response->status())
+            ->withHeaders($headers);
+    }
 }
 

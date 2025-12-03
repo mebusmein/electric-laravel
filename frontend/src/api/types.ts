@@ -17,6 +17,25 @@ export interface Todo {
   updated_at: string;
 }
 
+export interface Label {
+  id: number;
+  user_id: number;
+  name: string;
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateLabelData {
+  name: string;
+  color: string;
+}
+
+export interface UpdateLabelData {
+  name?: string;
+  color?: string;
+}
+
 export interface AuthResponse {
   user: User;
   token: string;
@@ -37,12 +56,14 @@ export interface RegisterCredentials {
 export interface CreateTodoData {
   title: string;
   description?: string;
+  label_ids?: number[];
 }
 
 export interface UpdateTodoData {
   title?: string;
   description?: string;
   completed?: boolean;
+  label_ids?: number[];
 }
 
 export interface ApiError {

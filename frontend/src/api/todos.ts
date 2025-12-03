@@ -1,10 +1,10 @@
 import { createCollection } from '@tanstack/react-db';
-import client from './client';
+import client, { API_URL, getAuthToken } from './client';
 import type { CreateTodoData, Todo, UpdateTodoData } from './types';
 import { electricCollectionOptions } from '@tanstack/electric-db-collection';
 import z from 'zod/v4';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 
 export const todosApi = {
   getAll: async (): Promise<Todo[]> => {
@@ -17,18 +17,24 @@ export const todosApi = {
     return response.data;
   },
 
-  create: async (data: CreateTodoData): Promise<Todo> => {
-    const response = await client.post<Todo>('/todos', data);
+  create: async (data: CreateTodoData): Promise<{ todo: Todo; txid: string }> => {
+    const response = await client.post<{ todo: Todo; txid: string }>('/todos', data);
     return response.data;
   },
 
-  update: async (id: number, data: UpdateTodoData): Promise<Todo> => {
-    const response = await client.put<Todo>(`/todos/${id}`, data);
+  update: async (id: number, data: UpdateTodoData): Promise<{ todo: Todo; txid: string }> => {
+    const response = await client.put<{ todo: Todo; txid: string }>(`/todos/${id}`, data);
     return response.data;
   },
 
-  delete: async (id: number): Promise<void> => {
-    await client.delete(`/todos/${id}`);
+  delete: async (id: number): Promise<{ txid: string }> => {
+    const response = await client.delete<{ txid: string }>(`/todos/${id}`);
+    return response.data;
+  },
+
+  syncLabels: async (id: number, labelIds: number[]): Promise<{ txid: string }> => {
+    const response = await client.put<{ txid: string }>(`/todos/${id}/labels`, { label_ids: labelIds });
+    return response.data;
   },
 };
 
@@ -42,11 +48,7 @@ const todoShape = z.object({
   updated_at: z.string(),
 })
 
-// Helper to get auth headers for Electric shape requests
-const getAuthToken = () => {
-  const token = localStorage.getItem('token');
-  return token ? `Bearer ${token}` : "";
-};
+
 
 export const todosCollection = createCollection(
   electricCollectionOptions({
@@ -57,6 +59,27 @@ export const todosCollection = createCollection(
       headers: {
         Authorization: getAuthToken,
       },
+    },
+    onInsert: async ({ transaction }) => {
+      const newItem = transaction.mutations[0].modified;
+      const response = await todosApi.create({
+        title: newItem.title,
+        description: newItem.description ?? undefined,
+      });
+      return { txid: Number(response.txid) };
+    },
+    onUpdate: async ({ transaction }) => {
+      const updatedItem = transaction.mutations[0].modified;
+      const response = await todosApi.update(updatedItem.id, {
+        title: updatedItem.title,
+        description: updatedItem.description ?? undefined,
+      });
+      return { txid: Number(response.txid) };
+    },
+    onDelete: async ({ transaction }) => {
+      const deletedItem = transaction.mutations[0].original;
+      const response = await todosApi.delete(deletedItem.id);
+      return { txid: Number(response.txid) };
     },
     getKey: (item) => item.id,
   })

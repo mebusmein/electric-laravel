@@ -4,7 +4,12 @@ import { TodoItem } from "./TodoItem";
 interface TodoListProps {
   todos: Todo[];
   onToggleComplete: (todo: Todo) => void;
-  onUpdate: (id: number, title: string, description?: string) => void;
+  onUpdate: (
+    id: number,
+    title: string,
+    description?: string,
+    labelIds?: number[]
+  ) => void;
   onDelete: (id: number) => void;
 }
 
@@ -28,4 +33,3 @@ export function TodoList({
     </div>
   );
 }
-

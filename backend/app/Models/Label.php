@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class Todo extends Model
+class Label extends Model
 {
     use HasFactory;
 
@@ -17,25 +17,12 @@ class Todo extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'title',
-        'description',
-        'completed',
+        'name',
+        'color',
     ];
 
     /**
-     * The attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'completed' => 'boolean',
-        ];
-    }
-
-    /**
-     * Get the user that owns the todo.
+     * Get the user that owns the label.
      */
     public function user(): BelongsTo
     {
@@ -43,11 +30,11 @@ class Todo extends Model
     }
 
     /**
-     * Get the labels for the todo.
+     * Get the todos that have this label.
      */
-    public function labels(): BelongsToMany
+    public function todos(): BelongsToMany
     {
-        return $this->belongsToMany(Label::class);
+        return $this->belongsToMany(Todo::class);
     }
 }
 

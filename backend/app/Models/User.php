@@ -55,4 +55,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(Todo::class);
     }
+
+    /**
+     * Get the labels for the user.
+     */
+    public function labels(): HasMany
+    {
+        return $this->hasMany(Label::class);
+    }
 }

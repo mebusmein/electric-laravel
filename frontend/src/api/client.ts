@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+// Helper to get auth headers for Electric shape requests
+export const getAuthToken = () => {
+  const token = localStorage.getItem('token');
+  return token ? `Bearer ${token}` : "";
+};
 
 const client = axios.create({
   baseURL: `${API_URL}/api`,

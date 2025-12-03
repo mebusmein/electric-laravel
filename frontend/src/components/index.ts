@@ -7,4 +7,6 @@ export { TodoList } from "./TodoList";
 export { EmptyState } from "./EmptyState";
 export { LoadingSpinner } from "./LoadingSpinner";
 export { ProtectedRoute } from "./ProtectedRoute";
+export { LabelsSidebar } from "./LabelsSidebar";
+export { LabelSelector } from "./LabelSelector";
 

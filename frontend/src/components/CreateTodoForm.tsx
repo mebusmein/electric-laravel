@@ -1,13 +1,19 @@
 import { useState } from "react";
+import { LabelSelector } from "./LabelSelector";
 
 interface CreateTodoFormProps {
-  onCreate: (title: string, description?: string) => Promise<void>;
+  onCreate: (
+    title: string,
+    description?: string,
+    labelIds?: number[]
+  ) => Promise<void>;
 }
 
 export function CreateTodoForm({ onCreate }: CreateTodoFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [selectedLabelIds, setSelectedLabelIds] = useState<number[]>([]);
   const [isCreating, setIsCreating] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -16,9 +22,14 @@ export function CreateTodoForm({ onCreate }: CreateTodoFormProps) {
 
     setIsCreating(true);
     try {
-      await onCreate(title.trim(), description.trim() || undefined);
+      await onCreate(
+        title.trim(),
+        description.trim() || undefined,
+        selectedLabelIds.length > 0 ? selectedLabelIds : undefined
+      );
       setTitle("");
       setDescription("");
+      setSelectedLabelIds([]);
       setIsOpen(false);
     } catch (error) {
       console.error("Failed to create todo:", error);
@@ -31,6 +42,7 @@ export function CreateTodoForm({ onCreate }: CreateTodoFormProps) {
     setIsOpen(false);
     setTitle("");
     setDescription("");
+    setSelectedLabelIds([]);
   };
 
   if (!isOpen) {
@@ -77,6 +89,12 @@ export function CreateTodoForm({ onCreate }: CreateTodoFormProps) {
         rows={2}
         className="w-full px-4 py-3 bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent mb-3 resize-none"
       />
+      <div className="mb-3">
+        <LabelSelector
+          selectedLabelIds={selectedLabelIds}
+          onChange={setSelectedLabelIds}
+        />
+      </div>
       <div className="flex gap-2 justify-end">
         <button
           type="button"
@@ -96,4 +114,3 @@ export function CreateTodoForm({ onCreate }: CreateTodoFormProps) {
     </form>
   );
 }
-
